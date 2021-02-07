@@ -7,7 +7,7 @@ id_sentence = pickle.load(open("data/id_sentence.p", "rb"))
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
 
-def tokensize_and_save(dataset):
+def tokensize_and_save_SST2(dataset):
     filename = "data/id_rating_%s.p" % dataset
     id_rating = pickle.load(open(filename, "rb"))
 
@@ -31,7 +31,9 @@ def tokensize_and_save(dataset):
     print("Number of %s sentences:" % dataset, input_ids.shape[0])
     print("Maximum %s sequence length:" % dataset, input_ids.shape[1])
 
-    pickle.dump(input_ids, open("preprocessed_data/SST-2/input_ids_%s" % dataset, "wb"))
+    pickle.dump(
+        input_ids, open("preprocessed_data/SST-2/input_ids_%s" % dataset, "wb"),
+    )
     pickle.dump(
         attention_masks,
         open("preprocessed_data/SST-2/attention_masks_%s" % dataset, "wb"),
@@ -40,5 +42,5 @@ def tokensize_and_save(dataset):
 
 
 for dataset in ["train", "valid", "test"]:
-    tokensize_and_save(dataset)
+    tokensize_and_save_SST2(dataset)
 
