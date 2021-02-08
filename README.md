@@ -7,7 +7,7 @@ One of the datasets used for experimentation is the [Stanford Sentiment Treebank
 
 ## Code
 
-The `{bert, lstm, cnn}_sst2.ipynb` files run through training and saving a moddel on SST-2 (all though you will have to edit the Goole Drive directory that mount to). They should be run in a CPU-accelerated Google Colab environment. The training and fine-tuning code is adapted from [Chris McCormick's(https://mccormickml.com/) [tutorial](https://mccormickml.com/2019/05/14/BERT-word-embeddings-tutorial/). 
+The `{bert, lstm, cnn}_sst2.ipynb` files run through training and saving a moddel on SST-2 (all though you will have to edit the Goole Drive directory that mount to). They should be run in a CPU-accelerated Google Colab environment. The training and fine-tuning code is adapted from [Chris McCormick's](https://mccormickml.com/) [tutorial](https://mccormickml.com/2019/05/14/BERT-word-embeddings-tutorial/). 
 
 ## Models
 
