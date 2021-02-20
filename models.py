@@ -33,7 +33,7 @@ class CNN(nn.Module):
         concatted = torch.cat(pooled, 1)
 
         dropped = (
-            self.dropout_train(concatted) 
+            self.dropout_train(concatted) if train else self.dropout_test(concatted)
         )
 
         output = self.linear(dropped)
