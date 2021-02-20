@@ -16,7 +16,9 @@ class CNN(nn.Module):
             in_features=in_channels, out_features=out_channels, bias=True
         )
 
-    def forward(self, x, token_type_ids,attention_mask,labels,return_dict=True,train=True):
+    def forward(
+        self, x, token_type_ids, attention_mask, labels, return_dict=True, train=True
+    ):
 
         embedded = self.embeddings(x)
         embedded = embedded.unsqueeze(1)
@@ -43,7 +45,18 @@ class CNN(nn.Module):
         criterion = nn.NLLLoss()
 
         y = labels
-        
-        self.loss = criterion(self.logits,y)       
-        
+
+        self.loss = criterion(self.logits, y)
+
+        return self
+
+
+class LSTM(nn.Module):
+    def __init__(self):
+        super(LSTM, self).__init__()
+
+    def forward(self):
+        self.logits = None
+        self.loss = None
+
         return self
