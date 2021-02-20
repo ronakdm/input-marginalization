@@ -16,7 +16,7 @@ class CNN(nn.Module):
             in_features=in_channels, out_features=out_channels, bias=True
         )
 
-    def forward(self, x, token_type_ids,attention_mask,labels,return_dict=True):
+    def forward(self, x, token_type_ids,attention_mask,labels,return_dict=True,train=True):
 
         embedded = self.embeddings(x)
         embedded = embedded.unsqueeze(1)
