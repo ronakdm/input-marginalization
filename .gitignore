@@ -1,3 +1,6 @@
+# MAC OS Files.
+# data/.DS_Store TODO: Ignore after it's deleted.
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
