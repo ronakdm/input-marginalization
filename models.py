@@ -65,7 +65,7 @@ class LSTM(nn.Module):
         self.dropout_train, self.dropout_test, self.dropout_embedded = nn.Dropout(p=0.5), nn.Dropout(p=0), nn.Dropout(p=0.3)
         self.output = nn.Linear(layered_hidden_dim, n_labels)
 
-    def forward(self, text, train =True):
+    def forward(self, text, token_type_ids, attention_mask, labels, return_dict=True, train=True):
         embedded = self.embedding(text)
         dropped_embedded = self.dropout_embedded(embedded)
         output, (hidden, cell) = self.rnn(dropped_embedded)
