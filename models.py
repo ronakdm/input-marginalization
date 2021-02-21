@@ -52,11 +52,27 @@ class CNN(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self):
-        super(LSTM, self).__init__()
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, n_labels, n_rnn_layers):
+        super().__init__()
+        
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        ##can change
+        
+        self.rnn = nn.LSTM(
+                           embedding_dim, hidden_dim, num_layers=n_rnn_layers, batch_first=True, bidirectional=True
+                           )
+                           layered_hidden_dim = hidden_dim * n_rnn_layers * 2
+                           self.dropout_train, self.dropout_test, self.dropout_embedded = nn.Dropout(p=0.5), nn.Dropout(p=0), nn.Dropout(p=0.3)
+                           self.output = nn.Linear(layered_hidden_dim, n_labels)
 
-    def forward(self):
-        self.logits = None
-        self.loss = None
-
-        return self
+    def forward(self, text, train =True):
+        embedded = self.embedding(text)
+        dropped_embedded = self.dropout_embedded(embedded)
+        output, (hidden, cell) = self.rnn(dropped_embedded)
+        dropped = (
+                   self.dropout_train(hidden) if train else self.dropout_test(hidden)
+                   )
+            
+                   dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
+                   
+        return self.output(dropped)
