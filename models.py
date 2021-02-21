@@ -61,9 +61,9 @@ class LSTM(nn.Module):
         self.rnn = nn.LSTM(
                            embedding_dim, hidden_dim, num_layers=n_rnn_layers, batch_first=True, bidirectional=True
                            )
-                           layered_hidden_dim = hidden_dim * n_rnn_layers * 2
-                           self.dropout_train, self.dropout_test, self.dropout_embedded = nn.Dropout(p=0.5), nn.Dropout(p=0), nn.Dropout(p=0.3)
-                           self.output = nn.Linear(layered_hidden_dim, n_labels)
+        layered_hidden_dim = hidden_dim * n_rnn_layers * 2
+        self.dropout_train, self.dropout_test, self.dropout_embedded = nn.Dropout(p=0.5), nn.Dropout(p=0), nn.Dropout(p=0.3)
+        self.output = nn.Linear(layered_hidden_dim, n_labels)
 
     def forward(self, text, train =True):
         embedded = self.embedding(text)
