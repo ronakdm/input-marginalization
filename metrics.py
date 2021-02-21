@@ -57,4 +57,38 @@ def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
 
+def color_sentence(model, sentence, erasure_type):
+    att_score = erasure_type(model, sentence)[0][1:-1] #extra characters been removed
+    
+    evaluate_tensor = att_score-torch.mean(att_score)
+
+    #define some color for different levels of effect
+    dark_red = [150,0,0]
+    red = [225,0,0]
+    orange = [255,160,100]
+    dark_blue = [0,50,180]
+    blue = [0, 150,225]
+    light_blue = [180,240,255]
+
+    colored = []
+    
+    for i in range(len(evaluate_tensor)):
+         
+        if evaluate_tensor[i].item()>1: #very positive
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(dark_red[0]), str(dark_red[1]), str(dark_red[2]), sentence.split()[i]))
+        elif evaluate_tensor[i].item()>0.5: 
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(red[0]), str(red[1]), str(red[2]), sentence.split()[i]))
+        elif evaluate_tensor[i].item()>0.3:
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(orange[0]), str(orange[1]), str(orange[2]), sentence.split()[i]))
+        elif evaluate_tensor[i].item()<-1: #very negative
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(dark_blue[0]), str(dark_blue[1]), str(dark_blue[2]), sentence.split()[i]))
+        elif evaluate_tensor[i].item()>-0.5:
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(blue[0]), str(blue[1]), str(blue[2]), sentence.split()[i]))
+        elif evaluate_tensor[i].item()>-0.3:
+            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(light_blue[0]), str(light_blue[1]), str(light_blue[2]), sentence.split()[i]))
+        else:
+            colored.append(sentence.split()[i])
+        
+    print(' '.join([str(elem) for elem in colored]) )
+
 # TODO: Input marginalization
