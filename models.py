@@ -54,7 +54,8 @@ class CNN(nn.Module):
 class LSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, n_labels, n_rnn_layers):
         super().__init__()
-        
+        self.loss = 0
+        self.logits = 0
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         ##can change
         
@@ -63,12 +64,12 @@ class LSTM(nn.Module):
                            )
         layered_hidden_dim = hidden_dim * n_rnn_layers * 2
         self.dropout_train, self.dropout_test, self.dropout_embedded = nn.Dropout(p=0.5), nn.Dropout(p=0), nn.Dropout(p=0.3)
-        self.output = nn.Linear(layered_hidden_dim, n_labels)
+        self.linear = nn.Linear(layered_hidden_dim, n_labels)
 
     def forward(self, text, token_type_ids, attention_mask, labels, return_dict=True, train=True):
         embedded = self.embedding(text)
         dropped_embedded = self.dropout_embedded(embedded)
-        output, (hidden, cell) = self.rnn(dropped_embedded)
+        _, (hidden, cell) = self.rnn(dropped_embedded)
 
         dropped = (
                    self.dropout_train(hidden) if train else self.dropout_test(hidden)
@@ -76,4 +77,11 @@ class LSTM(nn.Module):
             
         dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
                    
-        return self.output(dropped)
+        output =  self.linear(dropped)
+        self.logits = nn.functional.log_softmax(output, dim=1)
+        criterion = nn.NLLLoss()
+        y = labels
+        self.loss = criterion(self.logits, y)
+        return self
+
+
