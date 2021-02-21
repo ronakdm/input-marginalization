@@ -69,10 +69,11 @@ class LSTM(nn.Module):
         embedded = self.embedding(text)
         dropped_embedded = self.dropout_embedded(embedded)
         output, (hidden, cell) = self.rnn(dropped_embedded)
+
         dropped = (
                    self.dropout_train(hidden) if train else self.dropout_test(hidden)
                    )
             
-                   dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
+        dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
                    
         return self.output(dropped)
