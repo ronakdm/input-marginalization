@@ -33,17 +33,32 @@ def erasure(model, sentence, special_token):
     seq_len = input_ids.shape[1]
     model.eval()
 
+    # TODO: Check which one is correct.
+    label = 1
+
     att_scores = torch.zeros(input_ids.shape)
     with torch.no_grad():
 
-        log_odds_true = compute_log_odds(model, input_ids, attention_masks, labels)
+        # log_odds_true = compute_log_odds(model, input_ids, attention_masks, labels)
+        logits_true = model(
+            input_ids,
+            token_type_ids=None,
+            attention_mask=attention_masks,
+            labels=labels,
+        ).logits
 
         for t in range(seq_len):
             token = input_ids[0, t].item()  # item() to pass by value.
             input_ids[0, t] = vocab[special_token]
-            log_odds = compute_log_odds(model, input_ids, attention_masks, labels)
+            # log_odds = compute_log_odds(model, input_ids, attention_masks, labels)
+            logits = model(
+                input_ids,
+                token_type_ids=None,
+                attention_mask=attention_masks,
+                labels=labels,
+            ).logits
 
-            att_scores[0, t] = log_odds_true - log_odds
+            att_scores[0, t] = logits_true[label] - logits[label]
             input_ids[0, t] = token  # Change token back after replacement.
 
         return att_scores
@@ -58,37 +73,71 @@ def unk_erasure(model, sentence):
 
 
 def color_sentence(model, sentence, erasure_type):
-    att_score = erasure_type(model, sentence)[0][1:-1] #extra characters been removed
-    
-    evaluate_tensor = att_score-torch.mean(att_score)
+    evaluate_tensor = erasure_type(model, sentence)[0][
+        1:-1
+    ]  # extra characters been removed
 
-    #define some color for different levels of effect
-    dark_red = [150,0,0]
-    red = [225,0,0]
-    orange = [255,160,100]
-    dark_blue = [0,50,180]
-    blue = [0, 150,225]
-    light_blue = [180,240,255]
+    # define some color for different levels of effect
+    dark_red = [150, 0, 0]
+    red = [225, 0, 0]
+    orange = [255, 160, 100]
+    dark_blue = [0, 50, 180]
+    blue = [0, 150, 225]
+    light_blue = [180, 240, 255]
 
     colored = []
-    
+
     for i in range(len(evaluate_tensor)):
-         
-        if evaluate_tensor[i].item()>1: #very positive
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(dark_red[0]), str(dark_red[1]), str(dark_red[2]), sentence.split()[i]))
-        elif evaluate_tensor[i].item()>0.5: 
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(red[0]), str(red[1]), str(red[2]), sentence.split()[i]))
-        elif evaluate_tensor[i].item()>0.3:
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(orange[0]), str(orange[1]), str(orange[2]), sentence.split()[i]))
-        elif evaluate_tensor[i].item()<-1: #very negative
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(dark_blue[0]), str(dark_blue[1]), str(dark_blue[2]), sentence.split()[i]))
-        elif evaluate_tensor[i].item()>-0.5:
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(blue[0]), str(blue[1]), str(blue[2]), sentence.split()[i]))
-        elif evaluate_tensor[i].item()>-0.3:
-            colored.append("\033[48;2;{};{};{}m{}\033[0m".format(str(light_blue[0]), str(light_blue[1]), str(light_blue[2]), sentence.split()[i]))
+
+        if evaluate_tensor[i].item() > 1:  # very positive
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(dark_red[0]),
+                    str(dark_red[1]),
+                    str(dark_red[2]),
+                    sentence.split()[i],
+                )
+            )
+        elif evaluate_tensor[i].item() > 0.5:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(red[0]), str(red[1]), str(red[2]), sentence.split()[i]
+                )
+            )
+        elif evaluate_tensor[i].item() > 0.3:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(orange[0]), str(orange[1]), str(orange[2]), sentence.split()[i]
+                )
+            )
+        elif evaluate_tensor[i].item() < -1:  # very negative
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(dark_blue[0]),
+                    str(dark_blue[1]),
+                    str(dark_blue[2]),
+                    sentence.split()[i],
+                )
+            )
+        elif evaluate_tensor[i].item() > -0.5:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(blue[0]), str(blue[1]), str(blue[2]), sentence.split()[i]
+                )
+            )
+        elif evaluate_tensor[i].item() > -0.3:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(light_blue[0]),
+                    str(light_blue[1]),
+                    str(light_blue[2]),
+                    sentence.split()[i],
+                )
+            )
         else:
             colored.append(sentence.split()[i])
-        
-    print(' '.join([str(elem) for elem in colored]) )
+
+    print(" ".join([str(elem) for elem in colored]))
+
 
 # TODO: Input marginalization
