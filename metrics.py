@@ -33,9 +33,6 @@ def erasure(model, sentence, special_token):
     seq_len = input_ids.shape[1]
     model.eval()
 
-    # TODO: Check which one is correct.
-    label = 1
-
     att_scores = torch.zeros(input_ids.shape)
     with torch.no_grad():
 
@@ -45,7 +42,10 @@ def erasure(model, sentence, special_token):
             token_type_ids=None,
             attention_mask=attention_masks,
             labels=labels,
-        ).logits
+        ).logits[0]
+
+        # TODO: Check which one is correct.
+        label = torch.argmax(logits_true)
 
         for t in range(seq_len):
             token = input_ids[0, t].item()  # item() to pass by value.
@@ -56,7 +56,7 @@ def erasure(model, sentence, special_token):
                 token_type_ids=None,
                 attention_mask=attention_masks,
                 labels=labels,
-            ).logits
+            ).logits[0]
 
             att_scores[0, t] = logits_true[label] - logits[label]
             input_ids[0, t] = token  # Change token back after replacement.
@@ -85,11 +85,13 @@ def color_sentence(model, sentence, erasure_type):
     blue = [0, 150, 225]
     light_blue = [180, 240, 255]
 
+    splits = [-0.2, -0.1, -0.05, 0.3, 0.5, 1]
+
     colored = []
 
     for i in range(len(evaluate_tensor)):
 
-        if evaluate_tensor[i].item() > 1:  # very positive
+        if evaluate_tensor[i].item() > splits[5]:  # very positive
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(dark_red[0]),
@@ -98,19 +100,19 @@ def color_sentence(model, sentence, erasure_type):
                     sentence.split()[i],
                 )
             )
-        elif evaluate_tensor[i].item() > 0.5:
+        elif evaluate_tensor[i].item() > splits[4]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(red[0]), str(red[1]), str(red[2]), sentence.split()[i]
                 )
             )
-        elif evaluate_tensor[i].item() > 0.3:
+        elif evaluate_tensor[i].item() > splits[3]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(orange[0]), str(orange[1]), str(orange[2]), sentence.split()[i]
                 )
             )
-        elif evaluate_tensor[i].item() < -1:  # very negative
+        elif evaluate_tensor[i].item() < splits[0]:  # very negative
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(dark_blue[0]),
@@ -119,13 +121,13 @@ def color_sentence(model, sentence, erasure_type):
                     sentence.split()[i],
                 )
             )
-        elif evaluate_tensor[i].item() > -0.5:
+        elif evaluate_tensor[i].item() < splits[1]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(blue[0]), str(blue[1]), str(blue[2]), sentence.split()[i]
                 )
             )
-        elif evaluate_tensor[i].item() > -0.3:
+        elif evaluate_tensor[i].item() < splits[2]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(light_blue[0]),
