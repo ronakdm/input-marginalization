@@ -12,7 +12,8 @@ class GPT2TextDataset(Dataset):
         # Read text file as one long string, and tokenize into a list of vocab indices.
         with open(file_path, encoding="utf-8") as f:
             text = f.read()
-        tokenized_text = tokenizer(text)
+
+        tokenized_text = tokenizer(text).input_ids
 
         # Chop up the tokenized text into seq_len-sized windows.
         self.examples = []
