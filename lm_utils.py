@@ -29,7 +29,9 @@ class GPT2TextDataset(Dataset):
 def make_dataloaders(batch_size):
     dataloaders = []
     for dataset_name in ["train", "valid", "test"]:
-        dataset_path = "data/wikitext-2-raw/wiki.%s.raw" % dataset_name
+        dataset_path = (
+            "input-marginalization/data/wikitext-2-raw/wiki.%s.raw" % dataset_name
+        )
         dataset = GPT2TextDataset(file_path=dataset_path)
         dataloader = DataLoader(
             dataset, sampler=SequentialSampler(dataset), batch_size=batch_size
