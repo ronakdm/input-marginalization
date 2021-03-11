@@ -5,7 +5,8 @@ import time
 import torch
 import random
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
-
+from sklearn import preprocessing
+import torch.nn as nn
 
 def load_dataset(dataset_name):
     # `dataset_name` can be "train", "valid", or "test".
@@ -70,6 +71,45 @@ def generate_dataloaders(batch_size):
 
     return train_dataloader, validation_dataloader, test_dataloader
 
+class SNLIDataset(torch.utils.data.Dataset):
+    def __init__(self, fname, lencoder=None):
+        data = pickle.load(open(fname, 'rb'))
+
+        self.s1, self.s2, self.labels = data['s1'], data['s2'], data['labels']
+
+        self.le = lencoder
+        if not self.le:
+            self.le = preprocessing.LabelEncoder()
+            self.le.fit(labels)
+
+        self.labels = self.le.transform(labels)
+
+    def __len__(self):
+        return len(self.labels)
+    
+    def __getitem__(self, index):
+        return (self.s1[index], self.s2[index]), self.labels[index]
+
+def collate_snli(batch):
+    X, y = batch
+
+    s1, s2 = X
+
+    s1 = nn.utils.rnn.pad_sequence(s1, batch_first=True)
+    s2 = nn.utils.rnn.pad_sequence(s2, batch_first=True)
+
+    return (s1.float(), s2.float()), y.long()
+
+def generate_snli_dataloader(pre, batch_size):
+    train_dataset = SNLIDataset(os.path.join(pre, 'snli_train.pkl'))
+    dev_dataset = SNLIDataset(os.path.join(pre, 'snli_dev.pkl'), train_dataset.le)
+    test_dataset = SNLIDataset(os.path.join(pre, 'snli_test.pkl'), train_dataset.le)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_snli)
+    dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_snli)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_snli)
+
+    return train_dataloader, dev_dataloader, test_dataloader
 
 def train(
     model,
@@ -81,6 +121,7 @@ def train(
     save_dir,
     save_filename,
     device,
+    dataset='sst2',
     seed_val=42,
 ):
     random.seed(seed_val)
@@ -114,22 +155,37 @@ def train(
                     )
                 )
 
-            b_input_ids = batch[0].to(device)
-            b_input_mask = batch[1].to(device)
-            b_labels = batch[2].to(device)
+            if dataset == 'sst2':
+                b_input_ids = batch[0].to(device)
+                b_input_mask = batch[1].to(device)
+                b_labels = batch[2].to(device)
 
-            model.zero_grad()
+                model.zero_grad()
 
-            output = model(
-                b_input_ids,
-                token_type_ids=None,
-                attention_mask=b_input_mask,
-                labels=b_labels,
-                return_dict=True,
-            )
+                output = model(
+                    b_input_ids,
+                    token_type_ids=None,
+                    attention_mask=b_input_mask,
+                    labels=b_labels,
+                    return_dict=True,
+                )
 
-            loss = output.loss
-            logits = output.logits
+                loss = output.loss
+                logits = output.logits
+            elif dataset == 'snli':
+                X, y = batch[0], batch[1]
+ 
+                model.zero_grad()
+
+                output = model(
+                    sentences=X
+                    labels=y
+                )
+
+                criterion = nn.CrossEntropyLoss()
+                loss = criterion(output, y)
+            else:
+                except TypeError('Dataset not supported yet')
 
             total_train_loss += loss.item()
 
@@ -166,19 +222,32 @@ def train(
 
         for batch in validation_dataloader:
 
-            b_input_ids = batch[0].to(device)
-            b_input_mask = batch[1].to(device)
-            b_labels = batch[2].to(device)
+            if dataset == 'sst2':
+                b_input_ids = batch[0].to(device)
+                b_input_mask = batch[1].to(device)
+                b_labels = batch[2].to(device)
 
-            with torch.no_grad():
-                output = model(
-                    b_input_ids,
-                    token_type_ids=None,
-                    attention_mask=b_input_mask,
-                    labels=b_labels,
-                )
-                loss = output.loss
-                logits = output.logits
+                with torch.no_grad():
+                    output = model(
+                        b_input_ids,
+                        token_type_ids=None,
+                        attention_mask=b_input_mask,
+                        labels=b_labels,
+                    )
+                    loss = output.loss
+                    logits = output.logits
+            elif dataset == 'snli':
+                X, y = batch[0], batch[1]
+                
+                with torch.no_grad():
+                    output = model(
+                        sentences=X
+                        labels=y
+                    )
+
+                    logits=output
+                    criterion = nn.CrossEntropyLoss()
+                    loss = criterion(output, y)
 
             total_eval_loss += loss.item()
 
@@ -219,7 +288,7 @@ def train(
     )
 
 
-def test(model, test_dataloader, device, save_dir, save_filename):
+def test(model, test_dataloader, device, save_dir, save_filename, dataset='sst2'):
     # ========================================
     #               Testing
     # ========================================
@@ -235,20 +304,33 @@ def test(model, test_dataloader, device, save_dir, save_filename):
     total_test_loss = 0
 
     for batch in test_dataloader:
+        if dataset == 'sst2':
+            b_input_ids = batch[0].to(device)
+            b_input_mask = batch[1].to(device)
+            b_labels = batch[2].to(device)
 
-        b_input_ids = batch[0].to(device)
-        b_input_mask = batch[1].to(device)
-        b_labels = batch[2].to(device)
+            with torch.no_grad():
+                output = model(
+                    b_input_ids,
+                    token_type_ids=None,
+                    attention_mask=b_input_mask,
+                    labels=b_labels,
+                )
+                loss = output.loss
+                logits = output.logits
+        elif dataset == 'snli':
+            X, y = batch[0], batch[1]
 
-        with torch.no_grad():
-            output = model(
-                b_input_ids,
-                token_type_ids=None,
-                attention_mask=b_input_mask,
-                labels=b_labels,
-            )
-            loss = output.loss
-            logits = output.logits
+            with torch.no_grad():
+                output = model(
+                    sentences=X
+                    labels=y
+                )
+
+                logits=output
+                criterion = nn.CrossEntropyLoss()
+                loss = criterion(output, y)
+
 
         total_test_loss += loss.item()
 
