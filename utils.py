@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pickle
 import datetime
@@ -80,9 +81,9 @@ class SNLIDataset(torch.utils.data.Dataset):
         self.le = lencoder
         if not self.le:
             self.le = preprocessing.LabelEncoder()
-            self.le.fit(labels)
+            self.le.fit(self.labels)
 
-        self.labels = self.le.transform(labels)
+        self.labels = self.le.transform(self.labels)
 
     def __len__(self):
         return len(self.labels)
@@ -178,14 +179,14 @@ def train(
                 model.zero_grad()
 
                 output = model(
-                    sentences=X
+                    sentences=X,
                     labels=y
                 )
 
                 criterion = nn.CrossEntropyLoss()
                 loss = criterion(output, y)
             else:
-                except TypeError('Dataset not supported yet')
+                raise TypeError('Dataset not supported yet')
 
             total_train_loss += loss.item()
 
@@ -241,7 +242,7 @@ def train(
                 
                 with torch.no_grad():
                     output = model(
-                        sentences=X
+                        sentences=X,
                         labels=y
                     )
 
@@ -323,7 +324,7 @@ def test(model, test_dataloader, device, save_dir, save_filename, dataset='sst2'
 
             with torch.no_grad():
                 output = model(
-                    sentences=X
+                    sentences=X,
                     labels=y
                 )
 
