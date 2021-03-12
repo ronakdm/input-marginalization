@@ -71,6 +71,20 @@ def zero_erasure(model, sentence):
 def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
+def input_marg(model):
+    test_data = loaddata()
+    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+    iter_data = iter(test_data)
+
+    for i in range(SAMPLE_SIZE):
+        nextsample = next(iter_data)
+        inputsequences = nextsample[0].to(device)
+        inputmask =  nextsample[1].to(device)
+        labels = nextsample[2].to(device)
+        print("")
+        print(tokenizer.convert_ids_to_tokens(inputsequences[0][1:11]))
+        print(calculate_woe(model, torch.unsqueeze(inputsequences[0][1:11],0),torch.unsqueeze(inputmask[0][:11],0),  torch.unsqueeze(labels[0],0), SIGMA))
+
 
 def color_sentence(model, sentence, erasure_type):
     evaluate_tensor = erasure_type(model, sentence)[0][
