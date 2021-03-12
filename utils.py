@@ -258,6 +258,7 @@ def train(
                     logits=output
                     criterion = nn.CrossEntropyLoss()
                     loss = criterion(output, y)
+                    b_labels=y
 
             total_eval_loss += loss.item()
 
@@ -340,7 +341,7 @@ def test(model, test_dataloader, device, save_dir, save_filename, dataset='sst2'
                 logits=output
                 criterion = nn.CrossEntropyLoss()
                 loss = criterion(output, y)
-
+                b_labels=y
 
         total_test_loss += loss.item()
 
