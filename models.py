@@ -136,7 +136,7 @@ class SNLILSTM(nn.Module):
 
             return dropped
 
-        #dropped = torch.cat([encode(s1), encode(s2)], dim=1)
-        print(encode(s1).shape)
+        dropped = torch.cat([encode(s1), encode(s2)], dim=1)
+
         output = self.linear(dropped)
         return output

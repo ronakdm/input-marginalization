@@ -92,18 +92,22 @@ class SNLIDataset(torch.utils.data.Dataset):
         return (self.s1[index], self.s2[index]), self.labels[index]
 
 def collate_snli(batch):
-    X, y = batch[0], batch[1]
+    s1l, s2l, labels = [],[],[]
 
-    s1, s2 = X[0], X[1]
+    for dp in batch:
+      X, y = dp
 
-    print(s1,s2,y)
+      s1, s2 = X
+
+      s1l.append(torch.tensor(s1).long())
+      s2l.append(torch.tensor(s2).long())
+      labels.append(y)
     
-    s1 = [torch.tensor(x) for x in s1]
-    s2 = [torch.tensor(x) for x in s2]
-    s1 = nn.utils.rnn.pad_sequence(s1, batch_first=True)
-    s2 = nn.utils.rnn.pad_sequence(s2, batch_first=True)
+    s1l = nn.utils.rnn.pad_sequence(s1l, batch_first=True)
+    s2l = nn.utils.rnn.pad_sequence(s2l, batch_first=True)
+    labels = torch.tensor(labels).long()
 
-    return (s1.float(), s2.float()), y.long()
+    return (s1l, s2l), labels
 
 def generate_snli_dataloader(pre, batch_size):
     train_dataset = SNLIDataset(os.path.join(pre, 'snli_train.pkl'))
@@ -178,7 +182,8 @@ def train(
                 loss = output.loss
                 logits = output.logits
             elif dataset == 'snli':
-                X, y = batch[0], batch[1]
+                X, y = batch[0], batch[1].to(device)
+                X = (X[0].to(device), X[1].to(device))
  
                 model.zero_grad()
 
