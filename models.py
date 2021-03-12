@@ -92,6 +92,7 @@ class LSTM(nn.Module):
         self.loss = criterion(self.logits, y)
         return self
 
+
 class SNLILSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, n_labels, n_rnn_layers):
         super().__init__()
@@ -108,7 +109,7 @@ class SNLILSTM(nn.Module):
             bidirectional=True,
         )
         layered_hidden_dim = hidden_dim * n_rnn_layers * 2
-        layered_hidden_dim *= 2 # since concat 2 sentences
+        layered_hidden_dim *= 2  # since concat 2 sentences
 
         self.dropout_train, self.dropout_embedded = (
             nn.Dropout(p=0.5),
@@ -116,9 +117,7 @@ class SNLILSTM(nn.Module):
         )
         self.linear = nn.Linear(layered_hidden_dim, n_labels)
 
-    def forward(
-        self, sentences, labels
-    ):
+    def forward(self, sentences, labels):
         """
             All is same, except text is a tuple containing the 2 sentences
         """
