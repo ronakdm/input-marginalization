@@ -247,8 +247,8 @@ def train(
                     loss = output.loss
                     logits = output.logits
             elif dataset == 'snli':
-                X, y = batch[0], batch[1]
-                
+                X, y = batch[0], batch[1].to(device)
+                X = (X[0].to(device), X[1].to(device)) 
                 with torch.no_grad():
                     output = model(
                         sentences=X,
@@ -258,6 +258,7 @@ def train(
                     logits=output
                     criterion = nn.CrossEntropyLoss()
                     loss = criterion(output, y)
+                    b_labels=y
 
             total_eval_loss += loss.item()
 
@@ -329,8 +330,8 @@ def test(model, test_dataloader, device, save_dir, save_filename, dataset='sst2'
                 loss = output.loss
                 logits = output.logits
         elif dataset == 'snli':
-            X, y = batch[0], batch[1]
-
+            X, y = batch[0], batch[1].to(device)
+            X = (X[0].to(device), X[1].to(device))
             with torch.no_grad():
                 output = model(
                     sentences=X,
@@ -340,7 +341,7 @@ def test(model, test_dataloader, device, save_dir, save_filename, dataset='sst2'
                 logits=output
                 criterion = nn.CrossEntropyLoss()
                 loss = criterion(output, y)
-
+                b_labels=y
 
         total_test_loss += loss.item()
 
