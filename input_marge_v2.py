@@ -40,7 +40,7 @@ log_softmax = LogSoftmax(dim=0)
 
 # Commented out IPython magic to ensure Python compatibility.
 # %%capture
-# tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 # bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 
 cnn = torch.load(f"{save_dir}/cnn_sst2.pt")
