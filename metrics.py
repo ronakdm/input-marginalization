@@ -30,7 +30,7 @@ def encode(sentence, device):
 
 
 # TODO: Make this work for batches.
-def erasure(model, sentence, special_token):
+def erasure(model, sentence, special_token, target_label=None):
     device = "cuda" if next(model.parameters()).is_cuda else "cpu"
     input_ids, attention_masks, labels = encode(sentence, device)
     seq_len = input_ids.shape[1]
@@ -43,8 +43,8 @@ def erasure(model, sentence, special_token):
             input_ids, attention_mask=attention_masks, labels=labels,
         ).logits[0]
 
-        # TODO: take target label as an argument.
-        label = torch.argmax(logits_true)
+        if target_label is None:
+            target_label = torch.argmax(logits_true)
 
         for t in range(seq_len):
             temp = input_ids[0, t].item()  # item() to pass by value.
@@ -53,7 +53,7 @@ def erasure(model, sentence, special_token):
                 input_ids, attention_mask=attention_masks, labels=labels,
             ).logits[0]
 
-            att_scores[0, t] = logits_true[label] - logits[label]
+            att_scores[0, t] = logits_true[target_label] - logits[target_label]
             input_ids[0, t] = temp  # Change token back after replacement.
 
         return att_scores
@@ -67,8 +67,9 @@ def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
 
-def input_marginalization(model, sentence, mlm, num_batches=50):
-    input_ids, attention_masks, labels = encode(model, sentence)
+def input_marginalization(model, sentence, mlm, target_label=None, num_batches=50):
+    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+    input_ids, attention_masks, labels = encode(sentence, device)
     seq_len = input_ids.shape[1]
     model.eval()
 
@@ -79,8 +80,8 @@ def input_marginalization(model, sentence, mlm, num_batches=50):
             input_ids, attention_mask=attention_masks, labels=labels,
         ).logits[0]
 
-        # TODO: take target label as an argument.
-        target_label = torch.argmax(logits_true)
+        if target_label is None:
+            target_label = torch.argmax(logits_true)
 
         # Get MLM distribution for every masked word.
         # Shape: [vocab_size * seq_len]
@@ -98,12 +99,10 @@ def input_marginalization(model, sentence, mlm, num_batches=50):
             # Get log_prob for every masked word ([vocab_size]).
             # Have to split it into batches by vocab.
 
-            model_log_probs = torch.zeros(vocab_size)
+            model_log_probs = torch.zeros(vocab_size).to(device)
 
             # Substitute in every word in the vocab for this token.
-            temp = torch.tensor(
-                [expanded_inputs[word, t].item() for word in range(vocab_size)]
-            )
+            temp = input_ids[0, t].item()
             expanded_inputs[:, t] = torch.arange(vocab_size)
 
             for b in range(num_batches):
@@ -132,7 +131,7 @@ def input_marginalization(model, sentence, mlm, num_batches=50):
             att_scores[0, t] = logits_true[target_label] - log_odds_marg
 
             # Replace the tokens that we substituted.
-            expanded_inputs[:, t] = temp
+            expanded_inputs[:, t] = torch.full((vocab_size,), temp)
 
         return att_scores
 
