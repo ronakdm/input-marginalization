@@ -1,15 +1,17 @@
 import torch
-from torch.nn import LogSoftmax
+import math
+import torch.nn.functional as F
+
+# from torch.nn import LogSoftmax
 
 from transformers import BertTokenizer
 
 tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 vocab = tokenizer.vocab
-log_softmax = LogSoftmax(dim=0)
+# log_softmax = LogSoftmax(dim=0)
 
 
-def encode(model, sentence):
-    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+def encode(sentence, device):
     encoded = tokenizer(sentence, return_tensors="pt")
     input_ids = encoded.input_ids.to(device)
     attention_masks = encoded.attention_mask.to(device)
@@ -18,48 +20,41 @@ def encode(model, sentence):
     return input_ids, attention_masks, labels
 
 
-def compute_log_odds(model, input_ids, attention_masks, labels):
-    logits = model(
-        input_ids, token_type_ids=None, attention_mask=attention_masks, labels=labels,
-    ).logits
-    label = torch.argmax(logits[0]).item()
-    log_odds = log_softmax(logits[0])[label] - log_softmax(logits[0])[1 - label]
-    return log_odds
+# def compute_log_odds(model, input_ids, attention_masks, labels):
+#     logits = model(
+#         input_ids, token_type_ids=None, attention_mask=attention_masks, labels=labels,
+#     ).logits
+#     label = torch.argmax(logits[0]).item()
+#     log_odds = log_softmax(logits[0])[label] - log_softmax(logits[0])[1 - label]
+#     return log_odds
 
 
 # TODO: Make this work for batches.
-def erasure(model, sentence, special_token):
-    input_ids, attention_masks, labels = encode(model, sentence)
+def erasure(model, sentence, special_token, target_label=None):
+    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+    input_ids, attention_masks, labels = encode(sentence, device)
     seq_len = input_ids.shape[1]
     model.eval()
 
     att_scores = torch.zeros(input_ids.shape)
     with torch.no_grad():
 
-        # log_odds_true = compute_log_odds(model, input_ids, attention_masks, labels)
         logits_true = model(
-            input_ids,
-            token_type_ids=None,
-            attention_mask=attention_masks,
-            labels=labels,
+            input_ids, attention_mask=attention_masks, labels=labels,
         ).logits[0]
 
-        # TODO: Check which one is correct.
-        label = torch.argmax(logits_true)
+        if target_label is None:
+            target_label = torch.argmax(logits_true)
 
         for t in range(seq_len):
-            token = input_ids[0, t].item()  # item() to pass by value.
+            temp = input_ids[0, t].item()  # item() to pass by value.
             input_ids[0, t] = vocab[special_token]
-            # log_odds = compute_log_odds(model, input_ids, attention_masks, labels)
             logits = model(
-                input_ids,
-                token_type_ids=None,
-                attention_mask=attention_masks,
-                labels=labels,
+                input_ids, attention_mask=attention_masks, labels=labels,
             ).logits[0]
 
-            att_scores[0, t] = logits_true[label] - logits[label]
-            input_ids[0, t] = token  # Change token back after replacement.
+            att_scores[0, t] = logits_true[target_label] - logits[target_label]
+            input_ids[0, t] = temp  # Change token back after replacement.
 
         return att_scores
 
@@ -72,10 +67,77 @@ def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
 
-def color_sentence(model, sentence, erasure_type):
-    evaluate_tensor = erasure_type(model, sentence)[0][
-        1:-1
-    ]  # extra characters been removed
+def input_marginalization(model, sentence, mlm, target_label=None, num_batches=50):
+    device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+    input_ids, attention_masks, labels = encode(sentence, device)
+    seq_len = input_ids.shape[1]
+    model.eval()
+
+    att_scores = torch.zeros(input_ids.shape)
+    with torch.no_grad():
+
+        logits_true = model(
+            input_ids, attention_mask=attention_masks, labels=labels,
+        ).logits[0]
+
+        if target_label is None:
+            target_label = torch.argmax(logits_true)
+
+        # Get MLM distribution for every masked word.
+        # Shape: [vocab_size * seq_len]
+        mlm_logits = mlm(input_ids).logits[0].transpose(0, 1)
+        vocab_size = mlm_logits.shape[0]
+
+        expanded_inputs = input_ids.repeat(vocab_size, 1)
+        expanded_attns = attention_masks.repeat(vocab_size, 1)
+        expanded_labels = labels.repeat(vocab_size)
+
+        vocab_batch_size = math.ceil(vocab_size / num_batches)
+
+        for t in range(seq_len):
+
+            # Get log_prob for every masked word ([vocab_size]).
+            # Have to split it into batches by vocab.
+
+            model_log_probs = torch.zeros(vocab_size).to(device)
+
+            # Substitute in every word in the vocab for this token.
+            temp = input_ids[0, t].item()
+            expanded_inputs[:, t] = torch.arange(vocab_size)
+
+            for b in range(num_batches):
+                start_idx = b * vocab_batch_size
+                end_idx = min((b + 1) * vocab_batch_size, vocab_size)
+
+                batch_inputs = expanded_inputs[start_idx:end_idx]
+                batch_attns = expanded_attns[start_idx:end_idx]
+                batch_labels = expanded_labels[start_idx:end_idx]
+
+                # Shape: [vocab_batch_size * num_labels]
+                model_logits = model(
+                    batch_inputs, attention_mask=batch_attns, labels=batch_labels,
+                ).logits
+
+                # Shape: [vocab_batch_size]
+                model_log_probs[start_idx:end_idx] = F.log_softmax(model_logits, dim=1)[
+                    :, target_label
+                ]
+
+            # Shape: [vocab_batch_size]
+            mlm_log_probs = F.log_softmax(mlm_logits[:, t], dim=0)
+            log_prob_marg = torch.logsumexp(model_log_probs + mlm_log_probs, 0)
+            log_odds_marg = log_prob_marg - torch.log(1 - torch.exp(log_prob_marg))
+
+            att_scores[0, t] = logits_true[target_label] - log_odds_marg
+
+            # Replace the tokens that we substituted.
+            expanded_inputs[:, t] = torch.full((vocab_size,), temp)
+
+        return att_scores
+
+
+def color_sentence(sentence, att_scores):
+    evaluate_tensor = att_scores[1:-1]  # extra characters been removed
 
     # define some color for different levels of effect
     dark_red = [150, 0, 0]
@@ -140,6 +202,3 @@ def color_sentence(model, sentence, erasure_type):
             colored.append(sentence.split()[i])
 
     print(" ".join([str(elem) for elem in colored]))
-
-
-# TODO: Input marginalization
