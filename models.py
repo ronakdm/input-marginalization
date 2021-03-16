@@ -5,8 +5,10 @@ from torch import nn
 class CNN(nn.Module):
     def __init__(self, in_channels, out_channels, vocab_size, embedding_dim):
         super(CNN, self).__init__()
-        self.loss = 0
-        self.logits = 0
+        self.loss = None
+        self.logits = None
+        self.criterion = nn.CrossEntropyLoss()
+
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.convs = nn.ModuleList(
             [nn.Conv1d(1, 100, (n, embedding_dim)) for n in (3, 4, 5)]
@@ -38,15 +40,10 @@ class CNN(nn.Module):
             self.dropout_train(concatted) if train else self.dropout_test(concatted)
         )
 
-        output = self.linear(dropped)
-
-        self.logits = nn.functional.log_softmax(output, dim=1)
-
-        criterion = nn.NLLLoss()
+        self.logits = self.linear(dropped)
 
         y = labels
-
-        self.loss = criterion(self.logits, y)
+        self.loss = self.criterion(self.logits, y)
 
         return self
 
@@ -54,8 +51,10 @@ class CNN(nn.Module):
 class LSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, n_labels, n_rnn_layers):
         super().__init__()
-        self.loss = 0
-        self.logits = 0
+        self.loss = None
+        self.logits = None
+        self.criterion = nn.CrossEntropyLoss()
+
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         ##can change
 
@@ -85,11 +84,9 @@ class LSTM(nn.Module):
 
         dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
 
-        output = self.linear(dropped)
-        self.logits = nn.functional.log_softmax(output, dim=1)
-        criterion = nn.NLLLoss()
+        self.logits = self.linear(dropped)
         y = labels
-        self.loss = criterion(self.logits, y)
+        self.loss = self.criterion(self.logits, y)
         return self
 
 
