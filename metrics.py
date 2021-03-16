@@ -136,69 +136,88 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
         return att_scores
 
 
-def color_sentence(sentence, att_scores):
-    evaluate_tensor = att_scores[1:-1]  # extra characters been removed
+def colored_sentence(sentence, att_scores):
 
-    # define some color for different levels of effect
-    dark_red = [150, 0, 0]
-    red = [225, 0, 0]
-    orange = [255, 160, 100]
-    dark_blue = [0, 50, 180]
-    blue = [0, 150, 225]
-    light_blue = [180, 240, 255]
+    tokenized_sentence, _, _ = encode(sentence, "cpu")
 
-    splits = [-0.2, -0.1, -0.05, 0.3, 0.5, 1]
+    # Define some color for different levels of effect.
+    red3 = [255, 0, 0]
+    red2 = [225, 102, 102]
+    red1 = [255, 204, 204]
+    red0 = [255, 230, 234]
+    blue0 = [204, 229, 255]
+    blue1 = [204, 229, 255]
+    blue2 = [102, 178, 225]
+    blue3 = [0, 0, 255]
+
+    splits = [-0.2, -0.1, -0.05, 0, 0.3, 0.5, 1]
 
     colored = []
+    joined = []
 
-    for i in range(len(evaluate_tensor)):
-
-        if evaluate_tensor[i].item() > splits[5]:  # very positive
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(dark_red[0]),
-                    str(dark_red[1]),
-                    str(dark_red[2]),
-                    sentence.split()[i],
-                )
-            )
-        elif evaluate_tensor[i].item() > splits[4]:
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(red[0]), str(red[1]), str(red[2]), sentence.split()[i]
-                )
-            )
-        elif evaluate_tensor[i].item() > splits[3]:
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(orange[0]), str(orange[1]), str(orange[2]), sentence.split()[i]
-                )
-            )
-        elif evaluate_tensor[i].item() < splits[0]:  # very negative
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(dark_blue[0]),
-                    str(dark_blue[1]),
-                    str(dark_blue[2]),
-                    sentence.split()[i],
-                )
-            )
-        elif evaluate_tensor[i].item() < splits[1]:
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(blue[0]), str(blue[1]), str(blue[2]), sentence.split()[i]
-                )
-            )
-        elif evaluate_tensor[i].item() < splits[2]:
-            colored.append(
-                "\033[48;2;{};{};{}m{}\033[0m".format(
-                    str(light_blue[0]),
-                    str(light_blue[1]),
-                    str(light_blue[2]),
-                    sentence.split()[i],
-                )
-            )
+    for i in range(len(tokenized_sentence)):
+        if tokenized_sentence[i][0] == "#":
+            tokenized_sentence[i] = tokenized_sentence[i][2:]
+            joined.append(1)
         else:
-            colored.append(sentence.split()[i])
+            joined.append(0)
 
-    print(" ".join([str(elem) for elem in colored]))
+        if att_scores[i] > splits[6]:  # very positive
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(red3[0]), str(red3[1]), str(red3[2]), tokenized_sentence[i],
+                )
+            )
+        elif att_scores[i] > splits[5]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(red2[0]), str(red2[1]), str(red2[2]), tokenized_sentence[i]
+                )
+            )
+        elif att_scores[i] > splits[4]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(red1[0]), str(red1[1]), str(red1[2]), tokenized_sentence[i]
+                )
+            )
+        elif att_scores[i] > splits[3]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(red0[0]), str(red0[1]), str(red0[2]), tokenized_sentence[i]
+                )
+            )
+        elif att_scores[i] > splits[2]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(blue0[0]), str(blue0[1]), str(blue0[2]), tokenized_sentence[i]
+                )
+            )
+        elif att_scores[i] > splits[1]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(blue1[0]), str(blue1[1]), str(blue1[2]), tokenized_sentence[i]
+                )
+            )
+        elif att_scores[i] > splits[0]:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(blue2[0]), str(blue2[1]), str(blue2[2]), tokenized_sentence[i]
+                )
+            )
+
+        else:
+            colored.append(
+                "\033[48;2;{};{};{}m{}\033[0m".format(
+                    str(blue3[0]), str(blue3[1]), str(blue3[2]), tokenized_sentence[i]
+                )
+            )
+    sent = ""
+
+    for i, elem in enumerate(colored):
+        if joined[i] == 1:
+            sent = sent + str(elem)
+        else:
+            sent = sent + " " + str(elem)
+
+    print(sent)
+
