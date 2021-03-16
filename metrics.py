@@ -151,21 +151,21 @@ def score_to_color(score, color_limit):
         blue = int(255 * (1 - frac))
         green = int(255 * (1 - frac))
 
-        rgb = [red, blue, green]
+        rgb = [red, green, blue]
     elif score < 0:
         frac = (lowest - score) / lowest
         blue = 255
         red = int(255 * (1 - frac))
         green = int(255 * (1 - frac))
 
-        rgb = [red, blue, green]
+        rgb = [red, green, blue]
     else:
         rgb = [255, 255, 255]
 
     return str(rgb[0]), str(rgb[1]), str(rgb[2])
 
 
-def continuous_colored_sentence(sentence, att_scores, color_limit=3):
+def continuous_colored_sentence(sentence, att_scores, color_limit=4):
 
     input_ids, _, _ = encode(sentence, "cpu")
     tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
