@@ -139,7 +139,7 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
 def colored_sentence(sentence, att_scores):
 
     input_ids, _, _ = encode(sentence, "cpu")
-    tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0])
+    tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
     scores = att_scores[0]
 
     # Define some color for different levels of effect.
