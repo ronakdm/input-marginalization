@@ -71,7 +71,7 @@ def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
 
-def input_marginalization(model, sentence):
+def input_marginalization(model, sentence, mlm):
     input_ids, attention_masks, labels = encode(model, sentence)
     seq_len = input_ids.shape[1]
     model.eval()
@@ -90,9 +90,24 @@ def input_marginalization(model, sentence):
         label = torch.argmax(logits_true)
 
         # Get MLM distribution for every masked word ([vocab_size * seq_len]).
+        mlm_logits = mlm(input_ids).logits[0].transpose(0, 1)
+        vocab_size = mlm_logits.shape[0]
+
         # Get log_prob for every masked word ([num_labels * vocab_size * seq_len] (index by label)).
-        # Add them up, and log_sum_exp along words ([seq_len]).
-        # Get log_odds from log_prob.
+        batch = input_ids.repeat(vocab_size, 1)
+        for t in range(seq_len):
+
+            # Store the value of this column before replacing it.
+            # temp = torch.tensor([batch[word, t].item() for word in range(vocab_size)])
+
+            # Set column of batch to contain all words.
+            batch[:, t] = torch.arange(vocab_size)
+
+            # Add them up, and log_sum_exp along words ([seq_len]).
+            # Get log_odds from log_prob.
+
+            # att_scores[0, t] = logits_true[label] - logits[label]
+            # input_ids[0, t] = token  # Change token back after replacement.
 
         return att_scores, label, seq_len
 
