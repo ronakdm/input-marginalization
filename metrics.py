@@ -138,7 +138,9 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
 
 def colored_sentence(sentence, att_scores):
 
-    tokenized_sentence, _, _ = encode(sentence, "cpu")
+    input_ids, _, _ = encode(sentence, "cpu")
+    tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0])
+    scores = att_scores[0]
 
     # Define some color for different levels of effect.
     red3 = [255, 0, 0]
@@ -162,43 +164,43 @@ def colored_sentence(sentence, att_scores):
         else:
             joined.append(0)
 
-        if att_scores[i] > splits[6]:  # very positive
+        if scores[i] > splits[6]:  # very positive
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(red3[0]), str(red3[1]), str(red3[2]), tokenized_sentence[i],
                 )
             )
-        elif att_scores[i] > splits[5]:
+        elif scores[i] > splits[5]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(red2[0]), str(red2[1]), str(red2[2]), tokenized_sentence[i]
                 )
             )
-        elif att_scores[i] > splits[4]:
+        elif scores[i] > splits[4]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(red1[0]), str(red1[1]), str(red1[2]), tokenized_sentence[i]
                 )
             )
-        elif att_scores[i] > splits[3]:
+        elif scores[i] > splits[3]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(red0[0]), str(red0[1]), str(red0[2]), tokenized_sentence[i]
                 )
             )
-        elif att_scores[i] > splits[2]:
+        elif scores[i] > splits[2]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(blue0[0]), str(blue0[1]), str(blue0[2]), tokenized_sentence[i]
                 )
             )
-        elif att_scores[i] > splits[1]:
+        elif scores[i] > splits[1]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(blue1[0]), str(blue1[1]), str(blue1[2]), tokenized_sentence[i]
                 )
             )
-        elif att_scores[i] > splits[0]:
+        elif scores[i] > splits[0]:
             colored.append(
                 "\033[48;2;{};{};{}m{}\033[0m".format(
                     str(blue2[0]), str(blue2[1]), str(blue2[2]), tokenized_sentence[i]
