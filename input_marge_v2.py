@@ -115,4 +115,46 @@ def input_marg(model):
     print(tokenizer.convert_ids_to_tokens(inputsequences[0][1:11]))
     print(calculate_woe(model, torch.unsqueeze(inputsequences[0][1:11],0),torch.unsqueeze(inputmask[0][:11],0),  torch.unsqueeze(labels[0],0), SIGMA))
 
-input_marg(cnn)
+def calculate_woe_mc(model, input_ids, attention_masks, label, sigma):
+  device = "cuda" if next(model.parameters()).is_cuda else "cpu"
+  bert_model.to(device)
+  
+  #predictions is the probability distribution of each word in the vocabulary for each word in input sentence
+  predictions = bert_model(input_ids)
+  predictions = torch.squeeze(predictions)
+  predictions = F.softmax(predictions, dim=1)
+  
+  #woe is the weight of evidence
+  woe = []
+  model.eval()
+  #ransom sampling n words from BERT MLM distribution
+  n = 1000
+  with torch.no_grad():
+    for j in range (len(predictions)):
+      #convert tensor to numpy array
+      predictions = predictions.cpu().numpy()
+      indicies = np.random.choice(len(predictions[j]),n,p=predictions[j])
+      predictions = torch.tensor(predictions).to(device)
+    
+      word_scores = [predictions[j][i] for i in indicies]
+      #normalizing probabilities based on the random sampled words
+      word_scores_n = [float(i)/sum(word_scores) for i in word_scores]
+      input_batch = input_ids.clone().to(device)
+      
+      #word_scores_batch calculates the value of the MLM of Bert for each masked word
+      #we put 0 for the first input which is unmasked
+      word_scores_batch = [0]
+
+      for k in range(len(word_scores_n)):
+        if word_scores_n[k] > sigma:
+           input_batch = torch.cat((input_batch, input_ids), 0)
+           input_batch[len(input_batch)-1][j] = k
+           word_scores_batch.append(word_scores_n[k].item())
+      
+      #probability_input calculates the p(label|sentence) of the target model given each masked input sentence
+      probability_input = compute_probability2(model, input_batch, attention_masks, label)     
+      m = torch.dot(torch.tensor(word_scores_batch).float().to(device), probability_input.float())
+      logodds_input = math.log(probability_input[0] / (1-probability_input[0]))
+      logodds_m = math.log(m / (1-m))
+      woe.append(logodds_input-logodds_m)
+  return woe
