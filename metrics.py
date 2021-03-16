@@ -136,10 +136,8 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
         return att_scores
 
 
-def color_sentence(model, sentence, erasure_type):
-    evaluate_tensor = erasure_type(model, sentence)[0][
-        1:-1
-    ]  # extra characters been removed
+def color_sentence(sentence, att_scores):
+    evaluate_tensor = att_scores[1:-1]  # extra characters been removed
 
     # define some color for different levels of effect
     dark_red = [150, 0, 0]
