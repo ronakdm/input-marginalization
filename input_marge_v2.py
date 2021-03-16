@@ -50,7 +50,7 @@ def loaddata ():
 
 def compute_probability(model, input_ids, attention_masks, label):
     logits = model(
-        input_ids, token_type_ids=None, attention_mask=attention_masks, labels=label.repeat((len(input_ids))),
+        input_ids,  attention_mask=attention_masks, labels=label.repeat((len(input_ids))),
     ).logits
     
     return math.exp(logits[0][label])
@@ -58,7 +58,7 @@ def compute_probability(model, input_ids, attention_masks, label):
 def compute_probability2(model, input_ids, attention_masks, label):
   
     logits = model(
-        input_ids.to(torch.int64), token_type_ids=None, attention_mask=attention_masks, labels=label.repeat((len(input_ids))),
+        input_ids.to(torch.int64), attention_mask=attention_masks, labels=label.repeat((len(input_ids))),
     ).logits
 
     return torch.exp(torch.reshape(logits[:, label], (-1,)))
