@@ -184,7 +184,6 @@ def train(
 
                 output = model(
                     b_input_ids,
-                    token_type_ids=None,
                     attention_mask=b_input_mask,
                     labels=b_labels,
                     return_dict=True,

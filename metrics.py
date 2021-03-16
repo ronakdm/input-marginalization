@@ -1,4 +1,6 @@
 import torch
+import math
+import torch.nn.functional as F
 
 # from torch.nn import LogSoftmax
 
@@ -48,7 +50,7 @@ def erasure(model, sentence, special_token):
         label = torch.argmax(logits_true)
 
         for t in range(seq_len):
-            token = input_ids[0, t].item()  # item() to pass by value.
+            temp = input_ids[0, t].item()  # item() to pass by value.
             input_ids[0, t] = vocab[special_token]
             logits = model(
                 input_ids,
@@ -58,7 +60,7 @@ def erasure(model, sentence, special_token):
             ).logits[0]
 
             att_scores[0, t] = logits_true[label] - logits[label]
-            input_ids[0, t] = token  # Change token back after replacement.
+            input_ids[0, t] = temp  # Change token back after replacement.
 
         return att_scores
 
@@ -71,7 +73,7 @@ def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
 
-def input_marginalization(model, sentence, mlm):
+def input_marginalization(model, sentence, mlm, num_batches=50):
     input_ids, attention_masks, labels = encode(model, sentence)
     seq_len = input_ids.shape[1]
     model.eval()
@@ -87,29 +89,61 @@ def input_marginalization(model, sentence, mlm):
         ).logits[0]
 
         # TODO: take target label as an argument.
-        label = torch.argmax(logits_true)
+        target_label = torch.argmax(logits_true)
 
-        # Get MLM distribution for every masked word ([vocab_size * seq_len]).
+        # Get MLM distribution for every masked word.
+        # Shape: [vocab_size * seq_len]
         mlm_logits = mlm(input_ids).logits[0].transpose(0, 1)
         vocab_size = mlm_logits.shape[0]
 
-        # Get log_prob for every masked word ([num_labels * vocab_size * seq_len] (index by label)).
-        batch = input_ids.repeat(vocab_size, 1)
+        expanded_inputs = input_ids.repeat(vocab_size, 1)
+        expanded_attns = attention_masks.repeat(vocab_size, 1)
+        expanded_labels = labels.repeat(vocab_size)
+
+        vocab_batch_size = math.ceil(vocab_size / num_batches)
+
         for t in range(seq_len):
 
-            # Store the value of this column before replacing it.
-            # temp = torch.tensor([batch[word, t].item() for word in range(vocab_size)])
+            # Get log_prob for every masked word ([vocab_size]).
+            # Have to split it into batches by vocab.
 
-            # Set column of batch to contain all words.
-            batch[:, t] = torch.arange(vocab_size)
+            model_log_probs = torch.zeros(vocab_size)
 
-            # Add them up, and log_sum_exp along words ([seq_len]).
-            # Get log_odds from log_prob.
+            # Substitute in every word in the vocab for this token.
+            temp = torch.tensor(
+                [expanded_inputs[word, t].item() for word in range(vocab_size)]
+            )
+            expanded_inputs[:, t] = torch.arange(vocab_size)
 
-            # att_scores[0, t] = logits_true[label] - logits[label]
-            # input_ids[0, t] = token  # Change token back after replacement.
+            for b in range(num_batches):
+                start_idx = b * vocab_batch_size
+                end_idx = min((b + 1) * vocab_batch_size, vocab_size)
 
-        return att_scores, label, seq_len
+                batch_inputs = expanded_inputs[start_idx:end_idx]
+                batch_attns = expanded_attns[start_idx:end_idx]
+                batch_labels = expanded_labels[start_idx:end_idx]
+
+                # Shape: [vocab_batch_size * num_labels]
+                model_logits = model(
+                    batch_inputs, attention_mask=batch_attns, labels=batch_labels,
+                ).logits
+
+                # Shape: [vocab_batch_size]
+                model_log_probs[start_idx:end_idx] = F.log_softmax(model_logits, dim=1)[
+                    :, target_label
+                ]
+
+            # Shape: [vocab_batch_size]
+            mlm_log_probs = F.log_softmax(mlm_logits[:, t], dim=0)
+            log_prob_marg = torch.logsumexp(model_log_probs + mlm_log_probs, 0)
+            log_odds_marg = log_prob_marg - torch.log(1 - torch.exp(log_prob_marg))
+
+            att_scores[0, t] = logits_true[target_label] - log_odds_marg
+
+            # Replace the tokens that we substituted.
+            expanded_inputs[:, t] = temp
+
+        return att_scores
 
 
 def color_sentence(model, sentence, erasure_type):

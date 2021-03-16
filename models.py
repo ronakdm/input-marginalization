@@ -19,7 +19,7 @@ class CNN(nn.Module):
         )
 
     def forward(
-        self, x, token_type_ids, attention_mask, labels, return_dict=True, train=True
+        self, x, attention_mask=None, labels=None, return_dict=True, train=True
     ):
 
         embedded = self.embeddings(x)
@@ -42,8 +42,8 @@ class CNN(nn.Module):
 
         self.logits = self.linear(dropped)
 
-        y = labels
-        self.loss = self.criterion(self.logits, y)
+        if labels is not None:
+            self.loss = self.criterion(self.logits, labels)
 
         return self
 
@@ -74,7 +74,7 @@ class LSTM(nn.Module):
         self.linear = nn.Linear(layered_hidden_dim, n_labels)
 
     def forward(
-        self, text, token_type_ids, attention_mask, labels, return_dict=True, train=True
+        self, text, attention_mask=None, labels=None, return_dict=True, train=True
     ):
         embedded = self.embedding(text)
         dropped_embedded = self.dropout_embedded(embedded)
@@ -85,8 +85,8 @@ class LSTM(nn.Module):
         dropped = dropped.transpose(0, 1).reshape(hidden.shape[1], -1)
 
         self.logits = self.linear(dropped)
-        y = labels
-        self.loss = self.criterion(self.logits, y)
+        if labels is not None:
+            self.loss = self.criterion(self.logits, labels)
         return self
 
 
