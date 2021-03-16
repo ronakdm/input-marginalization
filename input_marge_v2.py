@@ -38,11 +38,7 @@ SAMPLE_SIZE = 3
 SIGMA = 1e-4
 log_softmax = LogSoftmax(dim=0)
 
-<<<<<<< HEAD
-=======
-# Commented out IPython magic to ensure Python compatibility.
-# %%capture
->>>>>>> dbce599aa6e6ec8770329c2ed613132610396f28
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 
@@ -118,9 +114,7 @@ def input_marg(model):
     print(tokenizer.convert_ids_to_tokens(inputsequences[0][1:11]))
     print(calculate_woe(model, torch.unsqueeze(inputsequences[0][1:11],0),torch.unsqueeze(inputmask[0][:11],0),  torch.unsqueeze(labels[0],0), SIGMA))
 
-<<<<<<< HEAD
-input_marg(cnn)
-=======
+
 def calculate_woe_mc(model, input_ids, attention_masks, label, sigma):
   device = "cuda" if next(model.parameters()).is_cuda else "cpu"
   bert_model.to(device)
@@ -164,4 +158,3 @@ def calculate_woe_mc(model, input_ids, attention_masks, label, sigma):
       logodds_m = math.log(m / (1-m))
       woe.append(logodds_input-logodds_m)
   return woe
->>>>>>> dbce599aa6e6ec8770329c2ed613132610396f28
