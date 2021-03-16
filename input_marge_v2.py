@@ -29,7 +29,7 @@ from models import LSTM
 from torch.nn import LogSoftmax
 import math
 import torch.nn.functional as F
-
+import numpy as np
 from google.colab import drive
 drive.mount('/content/gdrive',force_remount=True)
 save_dir = "/content/gdrive/My Drive/input-marginalization"
