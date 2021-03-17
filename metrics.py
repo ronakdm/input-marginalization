@@ -164,6 +164,67 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
         else:
           return att_scores
 
+def score_to_color(score, color_limit):
+
+    lowest = -color_limit
+    highest = color_limit
+
+    if score > highest:
+        rgb = [255, 0, 0]
+    elif score < lowest:
+        rgb = [0, 0, 255]
+    elif score > 0:
+        frac = (highest - score) / highest
+        red = 255
+        blue = int(255 * (1 - frac))
+        green = int(255 * (1 - frac))
+
+        rgb = [red, green, blue]
+    elif score < 0:
+        frac = (lowest - score) / lowest
+        blue = 255
+        red = int(255 * (1 - frac))
+        green = int(255 * (1 - frac))
+
+        rgb = [red, green, blue]
+    else:
+        rgb = [255, 255, 255]
+
+    return str(rgb[0]), str(rgb[1]), str(rgb[2])
+
+
+def continuous_colored_sentence(sentence, att_scores, color_limit=8):
+
+    input_ids, _, _ = encode(sentence, "cpu")
+    tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
+    scores = att_scores[0]
+
+    colored = []
+    joined = []
+
+    for i in range(len(tokenized_sentence)):
+        if tokenized_sentence[i][0] == "#":
+            tokenized_sentence[i] = tokenized_sentence[i][2:]
+            joined.append(1)
+        else:
+            joined.append(0)
+
+        colors = score_to_color(scores[i], color_limit)
+        colored.append(
+            "\033[48;2;{};{};{}m{}\033[0m".format(
+                colors[0], colors[1], colors[2], tokenized_sentence[i],
+            )
+        )
+    sent = ""
+
+    for i, elem in enumerate(colored):
+        if joined[i] == 1:
+            sent = sent + str(elem)
+        else:
+            sent = sent + " " + str(elem)
+
+    print(sent)
+
 
 def colored_sentence(sentence, att_scores):
 
@@ -251,4 +312,3 @@ def colored_sentence(sentence, att_scores):
             sent = sent + " " + str(elem)
 
     print(sent)
-
