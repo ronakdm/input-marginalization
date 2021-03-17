@@ -220,9 +220,8 @@ def continuous_colored_sentence(
     else:
         input_ids = sentence
     tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
-    print(tokenized_sentence)
     scores = att_scores[0]
-    
+
     color_limit = [att_scores.min().item(), att_scores.max().item()]
 
     colored = []
