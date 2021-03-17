@@ -159,8 +159,10 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
             # Replace the tokens that we substituted.
             expanded_inputs[:, t] = torch.full((vocab_size,), temp)
 
+        s1 = input_ids.T[tok_type == 0].T
+        s2 = input_ids.T[tok_type == 1].T
         if dataset=='snli':
-          return (att_scores[0, tok_type == 0], att_scores[0, tok_type == 1])
+          return (s1, att_scores[0, tok_type == 0]), (s2, att_scores[0, tok_type == 1])
         else:
           return att_scores
 
@@ -193,9 +195,11 @@ def score_to_color(score, color_limit):
     return str(rgb[0]), str(rgb[1]), str(rgb[2])
 
 
-def continuous_colored_sentence(sentence, att_scores, color_limit=8):
-
-    input_ids, _, _ = encode(sentence, "cpu")
+def continuous_colored_sentence(sentence, att_scores, color_limit=8, pretok=False, print=True):
+    if not pretok:
+      input_ids, _, _ = encode(sentence, "cpu")
+    else:
+      input_ids = sentence
     tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
     scores = att_scores[0]
 
@@ -223,7 +227,10 @@ def continuous_colored_sentence(sentence, att_scores, color_limit=8):
         else:
             sent = sent + " " + str(elem)
 
-    print(sent)
+    if print:
+      print(sent)
+    else:
+      return sent
 
 
 def colored_sentence(sentence, att_scores):
