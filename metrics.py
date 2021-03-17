@@ -68,19 +68,38 @@ def zero_erasure(model, sentence):
 def unk_erasure(model, sentence):
     return erasure(model, sentence, "[UNK]")
 
+def snli_forward(model, sentences, tok_type):
+  s1 = sentences.T[tok_type == 0].T
+  s2 = sentences.T[tok_type == 1].T
 
-def input_marginalization(model, sentence, mlm, target_label=None, num_batches=50):
+  return model((s1, s2), labels=None)
+
+def input_marginalization(model, sentence, mlm, target_label=None, num_batches=50, dataset='sst2'):
     device = "cuda" if next(model.parameters()).is_cuda else "cpu"
-    input_ids, attention_masks, labels = encode(sentence, device)
+    
+    if dataset=='sst2':
+      input_ids, attention_masks, labels = encode(sentence, device)
+    elif dataset=='snli':
+      tok = tokenizer(sentence[0], sentence[1], return_tensors='pt')
+      input_ids = tok['input_ids'].to(device)
+      tok_type = tok['token_type_ids'].to(device)[0]
+      attention_masks = labels = None
+    else:
+      raise AttributeError('Dataset not supported')
+
     seq_len = input_ids.shape[1]
     model.eval()
-
+    
     att_scores = torch.zeros(input_ids.shape)
+
     with torch.no_grad():
 
-        logits_true = model(
-            input_ids, attention_mask=attention_masks, labels=labels,
-        ).logits[0]
+        if dataset=='sst2':
+          logits_true = model(
+              input_ids, attention_mask=attention_masks, labels=labels,
+          ).logits[0]
+        elif dataset=='snli':
+          logits_true = snli_forward(model, input_ids, tok_type)[0]
 
         if target_label is None:
             target_label = torch.argmax(logits_true)
@@ -89,13 +108,16 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
 
         # Get MLM distribution for every masked word.
         # Shape: [vocab_size * seq_len]
+
         mlm_logits = mlm(input_ids).logits[0].transpose(0, 1)
+
         vocab_size = mlm_logits.shape[0]
 
         expanded_inputs = input_ids.repeat(vocab_size, 1)
-        expanded_attns = attention_masks.repeat(vocab_size, 1)
-        expanded_labels = labels.repeat(vocab_size)
-
+        if dataset=='sst2':
+          expanded_attns = attention_masks.repeat(vocab_size, 1)
+          expanded_labels = labels.repeat(vocab_size)
+        
         vocab_batch_size = math.ceil(vocab_size / num_batches)
 
         for t in range(seq_len):
@@ -114,13 +136,17 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
                 end_idx = min((b + 1) * vocab_batch_size, vocab_size)
 
                 batch_inputs = expanded_inputs[start_idx:end_idx]
-                batch_attns = expanded_attns[start_idx:end_idx]
-                batch_labels = expanded_labels[start_idx:end_idx]
 
-                # Shape: [vocab_batch_size * num_labels]
-                model_logits = model(
-                    batch_inputs, attention_mask=batch_attns, labels=batch_labels,
-                ).logits
+                if dataset=='sst2':
+                  batch_attns = expanded_attns[start_idx:end_idx]
+                  batch_labels = expanded_labels[start_idx:end_idx]
+
+                  # Shape: [vocab_batch_size * num_labels]
+                  model_logits = model(
+                      batch_inputs, attention_mask=batch_attns, labels=batch_labels,
+                  ).logits
+                elif dataset=='snli':
+                  model_logits = snli_forward(model, batch_inputs, tok_type)
 
                 # Shape: [vocab_batch_size]
                 model_log_probs[start_idx:end_idx] = F.log_softmax(model_logits, dim=1)[
@@ -137,8 +163,12 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
             # Replace the tokens that we substituted.
             expanded_inputs[:, t] = torch.full((vocab_size,), temp)
 
-        return att_scores
-
+        s1 = input_ids.T[tok_type == 0].T
+        s2 = input_ids.T[tok_type == 1].T
+        if dataset=='snli':
+          return (s1, att_scores[0, tok_type == 0]), (s2, att_scores[0, tok_type == 1])
+        else:
+          return att_scores
 
 def score_to_color(score, color_limit):
 
@@ -169,9 +199,11 @@ def score_to_color(score, color_limit):
     return str(rgb[0]), str(rgb[1]), str(rgb[2])
 
 
-def continuous_colored_sentence(sentence, att_scores, color_limit=8):
-
-    input_ids, _, _ = encode(sentence, "cpu")
+def continuous_colored_sentence(sentence, att_scores, color_limit=8, pretok=False, print=True):
+    if not pretok:
+      input_ids, _, _ = encode(sentence, "cpu")
+    else:
+      input_ids = sentence
     tokenized_sentence = tokenizer.convert_ids_to_tokens(input_ids[0, 1:-1])
     scores = att_scores[0]
 
@@ -199,7 +231,10 @@ def continuous_colored_sentence(sentence, att_scores, color_limit=8):
         else:
             sent = sent + " " + str(elem)
 
-    print(sent)
+    if print:
+      print(sent)
+    else:
+      return sent
 
 
 def colored_sentence(sentence, att_scores):
@@ -288,4 +323,3 @@ def colored_sentence(sentence, att_scores):
             sent = sent + " " + str(elem)
 
     print(sent)
-
