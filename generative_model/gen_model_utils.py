@@ -7,13 +7,13 @@ class WikiText2Dataset(Dataset):
     def __init__(self, file_path="data/wikitext-2-raw/wiki.train.raw", seq_len=512):
 
         # Use GPT-2 vocabulary.
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
         # Read text file as one long string, and tokenize into a list of vocab indices.
         with open(file_path, encoding="utf-8") as f:
             text = f.read()
 
-        tokenized_text = tokenizer(text).input_ids
+        tokenized_text = self.tokenizer(text).input_ids
 
         # Chop up the tokenized text into seq_len-sized windows.
         self.examples = []
@@ -25,6 +25,10 @@ class WikiText2Dataset(Dataset):
 
     def __getitem__(self, item):
         return torch.tensor(self.examples[item])
+
+    def word_count(self):
+        # Don't count [PAD]
+        return len(self.tokenizer.vocab) - 1
 
 
 def make_dataloaders(batch_size):
