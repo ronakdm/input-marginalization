@@ -208,7 +208,7 @@ def score_to_color(score, color_limit):
 
 
 def continuous_colored_sentence(
-    sentence, att_scores, color_limit=8, pretok=False, print=True
+    sentence, att_scores, color_limit=8, pretok=False, verbose=True
 ):
     if not pretok:
         input_ids, _, _ = encode(sentence, "cpu")
@@ -241,7 +241,7 @@ def continuous_colored_sentence(
         else:
             sent = sent + " " + str(elem)
 
-    if print:
+    if verbose:
         print(sent)
     else:
         return sent
