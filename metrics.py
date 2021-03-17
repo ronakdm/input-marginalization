@@ -46,6 +46,8 @@ def erasure(model, sentence, special_token, target_label=None):
         if target_label is None:
             target_label = torch.argmax(logits_true)
 
+        log_odds_true = logits_true[target_label] - logits_true[1 - target_label]
+
         for t in range(seq_len):
             temp = input_ids[0, t].item()  # item() to pass by value.
             input_ids[0, t] = vocab[special_token]
@@ -53,7 +55,7 @@ def erasure(model, sentence, special_token, target_label=None):
                 input_ids, attention_mask=attention_masks, labels=labels,
             ).logits[0]
 
-            att_scores[0, t] = logits_true[target_label] - logits[target_label]
+            att_scores[0, t] = log_odds_true - logits[target_label]
             input_ids[0, t] = temp  # Change token back after replacement.
 
         return att_scores
@@ -82,6 +84,8 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
 
         if target_label is None:
             target_label = torch.argmax(logits_true)
+
+        log_odds_true = logits_true[target_label] - logits_true[1 - target_label]
 
         # Get MLM distribution for every masked word.
         # Shape: [vocab_size * seq_len]
@@ -128,7 +132,7 @@ def input_marginalization(model, sentence, mlm, target_label=None, num_batches=5
             log_prob_marg = torch.logsumexp(model_log_probs + mlm_log_probs, 0)
             log_odds_marg = log_prob_marg - torch.log(1 - torch.exp(log_prob_marg))
 
-            att_scores[0, t] = logits_true[target_label] - log_odds_marg
+            att_scores[0, t] = log_odds_true - log_odds_marg
 
             # Replace the tokens that we substituted.
             expanded_inputs[:, t] = torch.full((vocab_size,), temp)
