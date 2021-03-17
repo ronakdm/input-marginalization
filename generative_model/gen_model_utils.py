@@ -1,4 +1,4 @@
-# import torch
+import torch
 from torch.utils.data import Dataset, DataLoader, SequentialSampler
 from transformers import BertTokenizer
 
@@ -16,7 +16,7 @@ class WikiText2Dataset(Dataset):
             text = f.read()
 
         # tokenized_text = self.tokenizer(text).input_ids
-        self.data = self.tokenizer(text).input_ids
+        self.data = torch.tensor(self.tokenizer(text).input_ids, dtype=torch.int64)
 
         # Chop up the tokenized text into seq_len-sized windows.
         # self.examples = []
