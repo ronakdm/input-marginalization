@@ -190,15 +190,15 @@ def score_to_color(score, color_limit):
     elif score > 0:
         frac = (highest - score) / highest
         red = 255
-        blue = int(255 * (1 - frac))
-        green = int(255 * (1 - frac))
+        blue = int(255 * frac)
+        green = int(255 * frac)
 
         rgb = [red, green, blue]
     elif score < 0:
         frac = (lowest - score) / lowest
         blue = 255
-        red = int(255 * (1 - frac))
-        green = int(255 * (1 - frac))
+        red = int(255 * frac)
+        green = int(255 * frac)
 
         rgb = [red, green, blue]
     else:
