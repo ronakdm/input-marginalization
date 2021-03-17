@@ -104,11 +104,16 @@ def input_marginalization(
             ).logits[0]
         elif dataset == "snli":
             logits_true = snli_forward(model, input_ids, tok_type)[0]
+            softmax_true = F.softmax(logits_true, dim=0)
 
         if target_label is None:
             target_label = torch.argmax(logits_true)
 
-        log_odds_true = logits_true[target_label] - logits_true[1 - target_label]
+        #TODO: why don't we combine these cases
+        if dataset=='sst2':
+          log_odds_true = logits_true[target_label] - logits_true[1 - target_label]
+        elif dataset=='snli':
+          log_odds_true = softmax_true[target_label].log() - (1 - softmax_true[target_label]).log()
 
         # Get MLM distribution for every masked word.
         # Shape: [vocab_size * seq_len]
@@ -160,6 +165,7 @@ def input_marginalization(
             # Shape: [vocab_batch_size]
             mlm_log_probs = F.log_softmax(mlm_logits[:, t], dim=0)
             log_prob_marg = torch.logsumexp(model_log_probs + mlm_log_probs, 0)
+
             log_odds_marg = log_prob_marg - torch.log(1 - torch.exp(log_prob_marg))
 
             att_scores[0, t] = log_odds_true - log_odds_marg
