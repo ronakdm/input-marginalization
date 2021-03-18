@@ -17,6 +17,7 @@ The `{bert, lstm, cnn}-sst2.ipynb` files run through training and saving a model
 The `lstm-snli.ipynb` file will train a Bi-LSTM on the SNLI dataset.
 
 ### Input-Marginalization
+In order to get the figures that are seen in the results section we can run these few main files:
 `figure2` will reproduce figure 2 in the original paper for {CNN, LSTM, BERT} trained on SST-2.
 `snli_input_marge_v2.ipynb` replicates figure 2 for LSTM trained on SNLI.
 `figure3` will reproduce figure 3a in the original paper.
