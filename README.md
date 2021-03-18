@@ -27,4 +27,4 @@ The `lstm-snli.ipynb` file will train a Bi-LSTM on the SNLI dataset.
 The models, as well as their training and testing stats are saved, and can be found in this [Google Drive folder](https://drive.google.com/drive/folders/1j7VFnPhvn9Yg3fjx1flCQy3tHZlUs0mi?usp=sharing).
 
 ## Difficulty
-The input marginalization algorithm itself is not difficult, but we did run into subtle bugs (as is always when programming...)
+We started by implementing each of the models, were some of the difficulties lay in preprocessing and formatting the data correctly, as well as improving our accuracy. We had some trouble with implementing the input marginalization, and had to adjust our code to work for BERT, as well as our 3 other models. Finally, we ran into some subtle bugs when computing our AUC curve that took time to identify and solve. Overall we are proud of the work we accomplished on this project despite these challenges!
