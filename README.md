@@ -5,7 +5,9 @@
 
 One of the datasets used for experimentation is the [Stanford Sentiment Treebank (SST-2)](https://www.kaggle.com/atulanandjha/stanford-sentiment-treebank-v2-sst2). We started with the SST-2 [sentences](https://github.com/frankaging/SST2-Sentence) cleaned by [frankaging](https://github.com/frankaging), which are in the `data` folder. We then preprocessed the data by removing "neutral" sentiment sentences and representing the sentences in the [BERT](https://huggingface.co/transformers/model_doc/bert.html) vocabulary, which can be found in `preprocessed_data`.
 
-The other dataset used is the [Stanford Natural Language Inference (SNLI) Corpus](https://nlp.stanford.edu/projects/snli/). We processed this data into a tokenized representation using the BERT tokenizer. It is in preprocessed\_data/SNLI/snli\_1.0/snli\_{train, dev, test}.pkl.
+The other dataset used is the [Stanford Natural Language Inference (SNLI) Corpus](https://nlp.stanford.edu/projects/snli/). We processed this data into a tokenized representation using the BERT tokenizer. It is in `preprocessed_data/SNLI/snli_1.0/snli_{train, dev, test}.pkl`.
+
+Preprocessed SST-2 and SNLI is provided in the `preprocessed_data/`. Wikitext-2 is provided in `generative_model/data`.
 
 ## Code
 
@@ -16,7 +18,7 @@ The `{bert, lstm, cnn}-sst2.ipynb` files run through training and saving a model
 
 The `lstm-snli.ipynb` file will train a Bi-LSTM on the SNLI dataset.
 
-### Input-Marginalization
+### Input-Marginalization (Evaluation)
 `figure2` will reproduce figure 2 in the original paper for {CNN, LSTM, BERT} trained on SST-2.
 `snli_input_marge_v2.ipynb` replicates figure 2 for LSTM trained on SNLI.
 `figure3` will reproduce figure 3a in the original paper.
@@ -25,6 +27,23 @@ The `lstm-snli.ipynb` file will train a Bi-LSTM on the SNLI dataset.
 ## Models
 
 The models, as well as their training and testing stats are saved, and can be found in this [Google Drive folder](https://drive.google.com/drive/folders/1j7VFnPhvn9Yg3fjx1flCQy3tHZlUs0mi?usp=sharing).
+
+We fine-tuned a BERTForSentenceClassification model from HuggingFace for SST-2.
+
+## Results
+**Table 1: Test accuracy of target models**
+| Corpus      | LSTM | BERT | CNN  |
+| ----------- | ---- | ---- | ---- |
+| SST-2       | 0.77 | 0.92 | 0.75 |
+| SNLI        | 0.67 |  --  |  --  |
+
+**Table 2: Comparison of AUCrep with existing erasure scheme (lower is better)**
+| Zero | Unk | Input-Marginalization |
+| ---  | --- | --------------------- |
+| 0.5608 | 0.5328 | 0.4834 |
+
+## Dependencies
+`PyTorch, HuggingFace, pytorch_pretrained_bert`
 
 ## Difficulty
 The input marginalization algorithm itself is not difficult, but we did run into subtle bugs (as is always when programming...)
