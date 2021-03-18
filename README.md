@@ -19,6 +19,7 @@ The `{bert, lstm, cnn}-sst2.ipynb` files run through training and saving a model
 The `lstm-snli.ipynb` file will train a Bi-LSTM on the SNLI dataset.
 
 ### Input-Marginalization (Evaluation)
+In order to get the figures that are seen in the results section we can run these few main files:
 `figure2` will reproduce figure 2 in the original paper for {CNN, LSTM, BERT} trained on SST-2.
 `snli_input_marge_v2.ipynb` replicates figure 2 for LSTM trained on SNLI.
 `figure3` will reproduce figure 3a in the original paper.
@@ -46,4 +47,4 @@ We fine-tuned a BERTForSentenceClassification model from HuggingFace for SST-2.
 `PyTorch, HuggingFace, pytorch_pretrained_bert`
 
 ## Difficulty
-The input marginalization algorithm itself is not difficult, but we did run into subtle bugs (as is always when programming...)
+We started by implementing each of the models, were some of the difficulties lay in preprocessing and formatting the data correctly, as well as improving our accuracy. We had some trouble with implementing the input marginalization, and had to adjust our code to work for BERT, as well as our 3 other models. Finally, we ran into some subtle bugs when computing our AUC curve that took time to identify and solve. Overall we are proud of the work we accomplished on this project despite these challenges!
